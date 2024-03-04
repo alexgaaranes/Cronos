@@ -4,6 +4,7 @@ from discord import user
 from replit import db
 
 # CLEARING FOR TESTING ONLY
+
 # clear database
 for i in db:
   del db[i]
