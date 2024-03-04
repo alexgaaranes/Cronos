@@ -28,12 +28,10 @@ def checkReminder(db):
   current_hour = int(now.hour) + 8  # in PH only
   current_minute = int(now.minute)
 
-  print(str(current_hour) + ":" + str(current_minute))
-
   for user_id in db["reminders"]:
     if db["reminders"][user_id]["hour"] == current_hour and db["reminders"][
         user_id]["min"] == current_minute:
-      
+
       channel = db["reminders"][user_id]["channel"]
 
       current_hour = check.formatTime(current_hour)
