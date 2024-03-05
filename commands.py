@@ -4,18 +4,30 @@ import datetime, check
 
 def addReminder(content, db, id, channel):
   time = content.split(" ")[1]  # get raw time
-  remind_hour = int(time.split(":")[0])
-  remind_min = int(time.split(":")[1])
+  hour = int(time.split(":")[0])
+  min = int(time.split(":")[1])
+
+  now = datetime.datetime.now()
+
+  remind_hour = int(now.hour) + hour
+  remind_min = int(now.minute) + min
+
+  remind_hour = check.formatHour(remind_hour)
+  remind_min = check.formatMin(remind_min)
 
   db["reminders"] = {
       str(id): {
           "hour": remind_hour,
           "min": remind_min,
-          "channel": channel
+          "channel": channel,
+          "addedHr": hour,
+          "addedMin": min
       }
   }
 
-  return db, remind_hour, remind_min
+  #print(db)
+
+  return db, hour, min
 
 
 def delReminder(db, id):
@@ -25,17 +37,16 @@ def delReminder(db, id):
 
 def checkReminder(db):
   now = datetime.datetime.now()
-  current_hour = int(now.hour) + 8  # in PH only
+  current_hour = int(now.hour)
   current_minute = int(now.minute)
 
   for user_id in db["reminders"]:
-    if db["reminders"][user_id]["hour"] == current_hour and db["reminders"][
-        user_id]["min"] == current_minute:
+    remind_hour = db["reminders"][user_id]["hour"]
+    remind_minute = db["reminders"][user_id]["min"]
+    if remind_hour == current_hour and remind_minute == current_minute:
 
       channel = db["reminders"][user_id]["channel"]
 
-      current_hour = check.formatTime(current_hour)
-      current_minute = check.formatTime(current_minute)
-
-      return user_id, channel, current_hour, current_minute, True
+      return user_id, channel, db["reminders"][user_id]["addedHr"], db[
+          "reminders"][user_id]["addedMin"], True
   return None, None, None, None, False

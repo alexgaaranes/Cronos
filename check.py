@@ -8,7 +8,13 @@ def id_exists(id, db):
     return False
 
 
-def formatTime(time):
-  if time < 10:
-    time = "0" + str(time)
-  return time
+def formatHour(hr):
+  while hr >= 24:
+    hr -= 24
+  return hr
+
+
+def formatMin(min):
+  while min >= 60:
+    min -= 60
+  return min
