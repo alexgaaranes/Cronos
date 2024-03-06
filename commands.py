@@ -1,5 +1,9 @@
 # Commands module
-import datetime, check
+import datetime, check, wikipedia
+
+
+def wiki(content):
+  return wikipedia.summary(content, sentences=3)
 
 
 def addReminder(content, db, id, channel):

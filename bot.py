@@ -19,7 +19,6 @@ class MyClient(discord.Client):
     print("Logged on as {0}".format(self.user))
     self.loop.create_task(self.check_reminder_time())  # (CHECK REMINDERS)
 
-  
   # CHECK REMINDER
   async def check_reminder_time(self):
     while True:
@@ -35,7 +34,6 @@ class MyClient(discord.Client):
 
       await asyncio.sleep(10)
 
-  
   # DETECT MESSAGES
   async def on_message(self, message):
     global db
@@ -43,25 +41,21 @@ class MyClient(discord.Client):
     if message.author == self.user:  # Don't detect itself
       return
 
-    
     # VARIABLES
     id = message.author.id
     content = message.content
     channel = message.channel
     author = message.author
 
-    
     # SETUP
     if content.startswith("$setup"):
       if not check.id_exists(id, db):
         db["user_ids"].append(id)  # add user to db
         await channel.send(
-            f"{author.mention} account was created. Check commands using ``$help``"
-        )
+            f"{author.mention} registered. Check commands using ``$help``")
       else:
         await channel.send(f"{author.mention} account already exists.")
 
-    
     # SET REMINDER
     if content.startswith("$remind"):
       if check.id_exists(id, db):  # if the  id exists
@@ -77,12 +71,29 @@ class MyClient(discord.Client):
       else:
         await channel.send("You need to setup your account first.")
 
-    
     # HELP
     if content.startswith("$help"):
       await channel.send(
-          "Command List\n``$setup`` - setup your account\n``$remind HH:MM`` - set reminder hours:min from current time\n``$help`` - show commands"
+          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
       )
+
+    # SEARCH WIKI
+    if content.startswith("$wiki"):
+      if check.id_exists(id, db):
+        try:
+          topic = content[6:]
+          await channel.send(f"Searching wiki about {topic}...")
+          result = commands.wiki(topic)
+
+          await channel.send(f"```Topic: {topic} - \n{result}```")
+        except:
+          await channel.send("Invalid topic / Unable to find anything")
+      else:
+        await channel.send("You need to setup your account first.")
+
+    # PING
+    if content.startswith("$ping"):
+      await channel.send(f"Pong! {round(self.latency * 1000)}ms")
 
 
 intents = discord.Intents.default()
