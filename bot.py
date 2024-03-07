@@ -1,5 +1,6 @@
 # https://discord.com/oauth2/authorize?client_id=1214107803283624006&permissions=133120&scope=bot
 import discord, requests, json, os, datetime, check, commands, asyncio
+from discord.channel import _threaded_guild_channel_factory
 from discord import user
 from replit import db
 
@@ -9,7 +10,7 @@ for i in db:
   del db[i]
 
 # add user_ids
-db = {"user_ids": [], "reminders": {}}
+db = {"user_ids": [], "reminders": {}, "schedule": {}}
 
 
 class MyClient(discord.Client):
@@ -17,10 +18,12 @@ class MyClient(discord.Client):
   # RUNNING ON_START
   async def on_ready(self):
     print("Logged on as {0}".format(self.user))
-    self.loop.create_task(self.check_reminder_time())  # (CHECK REMINDERS)
+    client.loop.create_task(client.check_reminder_time())
+    client.loop.create_task(client.check_sched())
 
   # CHECK REMINDER
   async def check_reminder_time(self):
+    await self.wait_until_ready()
     while True:
       matched = False
       if db["reminders"] != {}:  # IF NOT EMPTY
@@ -31,6 +34,26 @@ class MyClient(discord.Client):
             f"<@{int(user_id)}>, {hour} hour/s and {minute} minute/s has passed!"
         )
         commands.delReminder(db, user_id)
+
+      await asyncio.sleep(10)
+
+  # CHECK SCHEDULE
+  async def check_sched(self):
+    await self.wait_until_ready()
+    while True:
+      matched = False
+      if db["schedule"] != {}:  # IF NOT EMPTY
+        tup = commands.checkSched(db)
+        day = tup[0]
+        time = tup[1]
+        desc = tup[2]
+        user_id = tup[3]
+        channel = tup[4]
+        matched = tup[5]
+
+      if matched:
+        time = str(time["hour"]) + ":" + str(time["min"])
+        await channel.send(f"<@{int(user_id)}>, {desc} at {time} on {day}")
 
       await asyncio.sleep(10)
 
@@ -74,7 +97,7 @@ class MyClient(discord.Client):
     # HELP
     if content.startswith("$help"):
       await channel.send(
-          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
+          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
       )
 
     # SEARCH WIKI
@@ -94,6 +117,30 @@ class MyClient(discord.Client):
     # PING
     if content.startswith("$ping"):
       await channel.send(f"Pong! {round(self.latency * 1000)}ms")
+
+    if content.startswith("$addsched"):  # $addsched <day> <time> <desc>
+      if check.id_exists(id, db):
+        try:
+          content = content.split(" ")
+          day = content[1]
+          time = content[2]
+          offset = int(content[3])
+          desc = "".join(content[4:])
+
+          if check.checkTime(time) and check.checkDay(day):
+            commands.addSched(db, id, day, time, offset, desc, channel)
+            await channel.send(
+                f"{author.mention} added a schedule.\n{day} - {time} - {desc}")
+          else:
+            await channel.send(
+                "Invalid time format. Use ``$addsched <day> <time> <desc>``")
+
+        except:
+          await channel.send(
+              "Invalid time format. Use ``$addsched <day> <time> <desc>``")
+
+      else:
+        await channel.send("You need to setup your account first.")
 
 
 intents = discord.Intents.default()
