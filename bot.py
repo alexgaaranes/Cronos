@@ -52,7 +52,8 @@ class MyClient(discord.Client):
         matched = tup[5]
 
       if matched:
-        time = str(time["hour"]) + ":" + str(time["min"])
+        time = check.formatTime(time["hour"]) + ":" + check.formatTime(
+            time["min"])
         await channel.send(f"<@{int(user_id)}>, {desc} at {time} on {day}")
 
       await asyncio.sleep(10)
@@ -125,7 +126,7 @@ class MyClient(discord.Client):
           day = content[1]
           time = content[2]
           offset = int(content[3])
-          desc = "".join(content[4:])
+          desc = " ".join(content[4:])
 
           if check.checkTime(time) and check.checkDay(day):
             commands.addSched(db, id, day, time, offset, desc, channel)
