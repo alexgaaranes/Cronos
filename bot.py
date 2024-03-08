@@ -6,11 +6,22 @@ from replit import db
 
 # CLEARING FOR TESTING ONLY
 # clear database
-for i in db:
-  del db[i]
+# for i in db:
+#   del db[i]
 
 # add user_ids
-db = {"user_ids": [], "reminders": {}, "schedule": {}}
+db["user_ids"] = []
+db["reminders"] = {}
+db["schedule"] = {
+    "Mon": {},
+    "Tue": {},
+    "Wed": {},
+    "Thu": {},
+    "Fri": {},
+    "Sat": {},
+    "Sun": {}
+}
+# db = {"user_ids": [], "reminders": {}, "schedule": {}}
 
 
 class MyClient(discord.Client):
@@ -21,6 +32,15 @@ class MyClient(discord.Client):
     client.loop.create_task(client.check_reminder_time())
     client.loop.create_task(client.check_sched())
 
+  # GET CHANNEL ID
+  async def get_channel_id(self, guild, channel_name):
+    for channel in guild.channels:
+      if isinstance(channel,
+                    discord.TextChannel) and channel.name == channel_name:
+        return channel.id
+
+    return None
+
   # CHECK REMINDER
   async def check_reminder_time(self):
     await self.wait_until_ready()
@@ -30,6 +50,9 @@ class MyClient(discord.Client):
         user_id, channel, hour, minute, matched = commands.checkReminder(db)
 
       if matched:
+        guild = discord.utils.get(client.guilds, name=self.guilds[0].name)
+        channel = await self.get_channel_id(guild, channel)
+        channel = client.get_channel(channel)
         await channel.send(
             f"<@{int(user_id)}>, {hour} hour/s and {minute} minute/s has passed!"
         )
@@ -83,15 +106,15 @@ class MyClient(discord.Client):
     # SET REMINDER
     if content.startswith("$remind"):
       if check.id_exists(id, db):  # if the  id exists
-        try:
-          db, hour, min = commands.addReminder(content, db, id,
-                                               channel)  # update db
+        #try:
+        db, hour, min = commands.addReminder(content, db, id,
+                                             channel)  # update db
 
-          await channel.send(
-              f"Reminder set {hour} hour/s and {min} minute/s from now"
-          )  # confirmation
-        except:  # NOT SURE WHAT ERROR YET
-          await channel.send("Invalid time format. Use ``$remind HH:MM``.")
+        await channel.send(
+            f"Reminder set {hour} hour/s and {min} minute/s from now"
+        )  # confirmation
+        #except:  # NOT SURE WHAT ERROR YET
+        #  await channel.send("Invalid time format. Use ``$remind HH:MM``.")
       else:
         await channel.send("You need to setup your account first.")
 
@@ -119,6 +142,7 @@ class MyClient(discord.Client):
     if content.startswith("$ping"):
       await channel.send(f"Pong! {round(self.latency * 1000)}ms")
 
+    # ADD SCHEDULE
     if content.startswith("$addsched"):  # $addsched <day> <time> <desc>
       if check.id_exists(id, db):
         try:

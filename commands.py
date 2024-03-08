@@ -9,29 +9,32 @@ def wiki(content):
 
 # ADD REMINDER
 def addReminder(content, db, id, channel):
+  # print(content)
   time = content.split(" ")[1]  # get raw time
   hour = int(time.split(":")[0])
   min = int(time.split(":")[1])
 
+  # print(str(hour) + ":" + str(min))
   now = datetime.datetime.now()
 
   remind_hour = int(now.hour) + hour
   remind_min = int(now.minute) + min
 
+  # print(str(remind_hour) + ":" + str(remind_min))
+
   remind_hour = check.formatHour(remind_hour)
   remind_min = check.formatMin(remind_min)
 
-  db["reminders"] = {
-      str(id): {
-          "hour": remind_hour,
-          "min": remind_min,
-          "channel": channel,
-          "addedHr": hour,
-          "addedMin": min
-      }
-  }
+  # print(str(remind_hour) + ":" + str(remind_min))
 
-  #print(db)
+  print(type(channel))
+  db["reminders"][str(id)] = {
+      "channel": str(channel),
+      "hour": remind_hour,
+      "min": remind_min,
+      "addedHr": hour,
+      "addedMin": min
+  }
 
   return db, hour, min
 
@@ -68,12 +71,14 @@ def addSched(db, user_id, day, time, offset, desc, channel):
   hour = check.formatHour(hour)
   min = check.formatMin(min)
 
-  db["schedule"] = {
+  if time not in check.checkSched(db["schedule"][user_id]["timeHash"])
+  db["schedule"][day] = {
       user_id: {
-          "day": day,
-          "time": {
-              "hour": hour,
-              "min": min
+          "timeHash": {
+              time: {
+                "hour": hour,
+                "min": min
+              }
           },
           "desc": desc,
           "channel": channel,

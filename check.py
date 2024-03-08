@@ -9,6 +9,13 @@ def id_exists(id, db):
     return False
 
 
+# Check time in schedule
+def checkSched(timeHash, time):
+  if timeHash in time:
+    return True
+  return False
+
+
 # String Format Time
 def formatTime(time):
   if time < 10:
