@@ -10,17 +10,17 @@ from replit import db
 #   del db[i]
 
 # add user_ids
-db["user_ids"] = []
-db["reminders"] = {}
-db["schedule"] = {
-    "Mon": {},
-    "Tue": {},
-    "Wed": {},
-    "Thu": {},
-    "Fri": {},
-    "Sat": {},
-    "Sun": {}
-}
+# db["user_ids"] = []
+# db["reminders"] = {}
+# db["schedule"] = {
+#     "Mon": {},
+#     "Tue": {},
+#     "Wed": {},
+#     "Thu": {},
+#     "Fri": {},
+#     "Sat": {},
+#     "Sun": {}
+# }
 # db = {"user_ids": [], "reminders": {}, "schedule": {}}
 
 # REMINDED USER_IDS
@@ -145,7 +145,7 @@ class MyClient(discord.Client):
     # HELP
     if content.startswith("$help"):
       await channel.send(
-          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week. Use the same command to edit an already existing schedule at the same time``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
+          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week. Use the same command to edit an already existing schedule at the same time``\n\n**$viewsched** - ``Views the user's schedule``\n\n**$delsched <day> <time>** - ``delete a schedule on a time of a day``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
       )
 
     # SEARCH WIKI
@@ -164,20 +164,20 @@ class MyClient(discord.Client):
 
     # PING
     if content.startswith("$ping"):
-      await channel.send(f"Pong! {round(self.latency * 1000)}ms")
+      await channel.send(f"Tick! Tock! {round(self.latency * 1000)}ms")
 
     # ADD SCHEDULE
     if content.startswith("$addsched"):  # $addsched <day> <time> <desc>
       if check.id_exists(id, db):
         try:
-          content = content.split(" ")
-          day = content[1]
-          time = content[2]
-          offset = int(content[3])
-          desc = " ".join(content[4:])
+          contents = content.split(" ")
+          day = contents[1]
+          time = contents[2]
+          offset = int(contents[3])
+          desc = " ".join(contents[4:])
 
           if check.checkTime(time) and check.checkDay(day):
-            commands.addSched(db, id, day, time, offset, desc, channel)
+            db = commands.addSched(db, id, day, time, offset, desc, channel)
             await channel.send(
                 f"{author.mention} added a schedule.\n{day} - {time} - {desc}")
           else:
@@ -190,6 +190,60 @@ class MyClient(discord.Client):
               "Invalid time format. Use ``$addsched <day> <time> <offset> <desc>``"
           )
 
+      else:
+        await channel.send("You need to setup your account first.")
+
+    # VIEW SCHEDULE
+    if content.startswith("$viewsched"):
+      if check.id_exists(id, db):
+        try:
+          await channel.send("Viewing your schedule...")
+          view_str = commands.viewSched(db["schedule"], id)
+
+          await channel.send(f"{author.mention}'s Schedule\n" + "```" +
+                             view_str + "```")
+        except:
+          await channel.send(
+              "An error occured while trying to view your schedule")
+      else:
+        await channel.send("You need to setup your account first.")
+
+    # DELETE SCHEDULE
+    if content.startswith("$delsched"):  #$delsched <day> <time>
+      if check.id_exists(id, db):
+        try:
+          day = content.split(" ")[1]
+          time = content.split(" ")[2]
+
+          confirm_msg = await channel.send(
+              "Are you sure you want to delete this schedule?")
+          await confirm_msg.add_reaction("✅")
+          await confirm_msg.add_reaction("❌")
+
+          def check_reaction(reaction, user):
+            return user == author and str(reaction.emoji) in [
+                "✅", "❌"
+            ] and reaction.message.id == confirm_msg.id
+
+          reaction, user = await client.wait_for("reaction_add",
+                                                 timeout=60.0,
+                                                 check=check_reaction)
+
+          if str(reaction.emoji) == "✅":
+            try:
+              db = commands.delSched(db, id, day, time)
+              await channel.send(f"{author.mention} deleted a schedule.")
+            except:
+              await channel.send(
+                  "An error occured while trying to delete your schedule")
+          else:
+            await channel.send("Deletion Cancelled")
+
+        except asyncio.TimeoutError:
+          await channel.send("No reaction received. Deletion cancelled.")
+        # except:
+        #   await channel.send(
+        #       "Invalid time format. Use ``$delsched <day> <time>``")
       else:
         await channel.send("You need to setup your account first.")
 

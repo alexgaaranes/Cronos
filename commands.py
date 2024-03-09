@@ -72,7 +72,7 @@ def addSched(db, user_id, day, time, offset, desc, channel):
 
   offset = int(offset)
 
-  if user_id not in db["schedule"][day]:  # NEW USER
+  if str(user_id) not in db["schedule"][day]:  # NEW USER
     db["schedule"][day][user_id] = {
         time: {
             "hour": hour,
@@ -82,14 +82,16 @@ def addSched(db, user_id, day, time, offset, desc, channel):
             "channel": str(channel)
         }
     }
-  else:
-    db["schedule"][day][user_id][time] = {
+  else:  # EXISTING USER
+    db["schedule"][day][str(user_id)][time] = {
         "hour": hour,
         "min": min,
         "offset": offset,
         "desc": desc,
         "channel": str(channel)
     }
+
+  return db
 
 
 # Check schedule
@@ -111,3 +113,31 @@ def checkSched(db, day, reminded):
           return (time, desc, user_id, channel, True)
 
   return None, None, None, None, None, False
+
+
+# View Schedule
+def viewSched(db_sched, user_id):
+  view_str = "=====================================\n|\n"
+
+  for day in db_sched:
+    view_str += "| " + day + " -\n"
+    
+    for id in db_sched[day]:
+      if str(user_id) == str(id):
+        user_sched = db_sched[day][id]  # A dictionary
+        sorted_time = check.sortTime(user_sched)
+        for time in sorted_time:
+          view_str += "|\t" + time + " - " + user_sched[time]["desc"] + "\n"
+
+    view_str += "|-------------------------------------\n"
+
+  view_str += "|\n=====================================\n"
+  return view_str
+
+
+# Delete schedule
+def delSched(db, user_id, day, time):
+  if str(user_id) in db["schedule"][day]:
+    del db["schedule"][day][str(user_id)][time]
+
+  return db
