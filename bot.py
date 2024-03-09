@@ -145,7 +145,7 @@ class MyClient(discord.Client):
     # HELP
     if content.startswith("$help"):
       await channel.send(
-          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week. Use the same command to edit an already existing schedule at the same time``\n\n**$viewsched** - ``Views the user's schedule``\n\n**$delsched <day> <time>** - ``delete a schedule on a time of a day``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
+          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week. Use the same command to edit an already existing schedule at the same time``\n\n**$viewsched** - ``Views the user's schedule``\n\n**$delsched <day> <time>** - ``delete a schedule on a time of a day``\n\n**$clearsched** - ``clear your schedule``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
       )
 
     # SEARCH WIKI
@@ -241,9 +241,48 @@ class MyClient(discord.Client):
 
         except asyncio.TimeoutError:
           await channel.send("No reaction received. Deletion cancelled.")
-        # except:
-        #   await channel.send(
-        #       "Invalid time format. Use ``$delsched <day> <time>``")
+
+        except:
+          await channel.send(
+              "Invalid time format. Use ``$delsched <day> <time>``")
+      else:
+        await channel.send("You need to setup your account first.")
+
+    # CLEAR SCHEDULE
+    if content.startswith("$clearsched"):
+      if check.id_exists(id, db):
+        pass
+        try:
+          confirm_msg = await channel.send(
+              "Are you sure you want to clear your schedule?")
+          await confirm_msg.add_reaction("✅")
+          await confirm_msg.add_reaction("❌")
+
+          def check_reaction(reaction, user):
+            return user == author and str(reaction.emoji) in [
+                "✅", "❌"
+            ] and reaction.message.id == confirm_msg.id
+
+          reaction, user = await client.wait_for("reaction_add",
+                                                 timeout=60.0,
+                                                 check=check_reaction)
+
+          if str(reaction.emoji) == "✅":
+            try:
+              db = commands.clearSched(db, id)
+              await channel.send(f"{author.mention} cleared their schedule.")
+            except:
+              await channel.send(
+                  "An error occured while trying to clear your schedule")
+          else:
+            await channel.send("Cancelled Clearing")
+
+        except asyncio.TimeoutError:
+          await channel.send("No reaction received. Clearing cancelled.")
+
+        except:
+          await channel.send(
+              "An error occured while trying to clear your schedule")
       else:
         await channel.send("You need to setup your account first.")
 

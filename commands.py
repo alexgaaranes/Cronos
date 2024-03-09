@@ -121,7 +121,7 @@ def viewSched(db_sched, user_id):
 
   for day in db_sched:
     view_str += "| " + day + " -\n"
-    
+
     for id in db_sched[day]:
       if str(user_id) == str(id):
         user_sched = db_sched[day][id]  # A dictionary
@@ -129,7 +129,7 @@ def viewSched(db_sched, user_id):
         for time in sorted_time:
           view_str += "|\t" + time + " - " + user_sched[time]["desc"] + "\n"
 
-    view_str += "|-------------------------------------\n"
+    view_str += "|------------------------------------\n"
 
   view_str += "|\n=====================================\n"
   return view_str
@@ -139,5 +139,14 @@ def viewSched(db_sched, user_id):
 def delSched(db, user_id, day, time):
   if str(user_id) in db["schedule"][day]:
     del db["schedule"][day][str(user_id)][time]
+
+  return db
+
+
+# clear schedule
+def clearSched(db, user_id):
+  for day in db["schedule"]:
+    if str(user_id) in db["schedule"][day]:
+      del db["schedule"][day][str(user_id)]
 
   return db
