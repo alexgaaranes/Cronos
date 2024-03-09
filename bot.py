@@ -23,6 +23,9 @@ db["schedule"] = {
 }
 # db = {"user_ids": [], "reminders": {}, "schedule": {}}
 
+# REMINDED USER_IDS
+reminded = {}
+
 
 class MyClient(discord.Client):
 
@@ -50,9 +53,11 @@ class MyClient(discord.Client):
         user_id, channel, hour, minute, matched = commands.checkReminder(db)
 
       if matched:
+        # Get Channel
         guild = discord.utils.get(client.guilds, name=self.guilds[0].name)
         channel = await self.get_channel_id(guild, channel)
         channel = client.get_channel(channel)
+
         await channel.send(
             f"<@{int(user_id)}>, {hour} hour/s and {minute} minute/s has passed!"
         )
@@ -63,21 +68,40 @@ class MyClient(discord.Client):
   # CHECK SCHEDULE
   async def check_sched(self):
     await self.wait_until_ready()
+
+    global reminded
+    temp_min = None
     while True:
+      now = datetime.datetime.now()
+      current_min = int(now.minute)  # Get current minute
+      current_day = now.strftime("%a")[0:3]
       matched = False
+
       if db["schedule"] != {}:  # IF NOT EMPTY
-        tup = commands.checkSched(db)
-        day = tup[0]
-        time = tup[1]
-        desc = tup[2]
-        user_id = tup[3]
-        channel = tup[4]
-        matched = tup[5]
+        tup = commands.checkSched(db, current_day, reminded)
+        time = tup[0]
+        desc = tup[1]
+        user_id = tup[2]
+        channel = tup[3]
+        matched = tup[4]
 
       if matched:
-        time = check.formatTime(time["hour"]) + ":" + check.formatTime(
-            time["min"])
-        await channel.send(f"<@{int(user_id)}>, {desc} at {time} on {day}")
+        if (user_id not in reminded):
+          # Add to reminded users in the current min
+          reminded[str(user_id)] = current_min
+          temp_min = current_min
+
+          # Get Channel
+          guild = discord.utils.get(client.guilds, name=self.guilds[0].name)
+          channel = await self.get_channel_id(guild, channel)
+          channel = client.get_channel(channel)
+          # Format time
+          time = check.formatTime(time["hour"]) + ":" + check.formatTime(
+              time["min"])
+          await channel.send(f"<@{int(user_id)}>, {desc} at {time}")
+
+      if temp_min != current_min:
+        reminded = {}
 
       await asyncio.sleep(10)
 
@@ -106,22 +130,22 @@ class MyClient(discord.Client):
     # SET REMINDER
     if content.startswith("$remind"):
       if check.id_exists(id, db):  # if the  id exists
-        #try:
-        db, hour, min = commands.addReminder(content, db, id,
-                                             channel)  # update db
+        try:
+          db, hour, min = commands.addReminder(content, db, id,
+                                               channel)  # update db
 
-        await channel.send(
-            f"Reminder set {hour} hour/s and {min} minute/s from now"
-        )  # confirmation
-        #except:  # NOT SURE WHAT ERROR YET
-        #  await channel.send("Invalid time format. Use ``$remind HH:MM``.")
+          await channel.send(
+              f"Reminder set {hour} hour/s and {min} minute/s from now"
+          )  # confirmation
+        except:  # NOT SURE WHAT ERROR YET
+          await channel.send("Invalid time format. Use ``$remind HH:MM``.")
       else:
         await channel.send("You need to setup your account first.")
 
     # HELP
     if content.startswith("$help"):
       await channel.send(
-          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
+          "```Command List```\n**$setup** - ``setup your account``\n\n**$remind <hours:minutes>** - ``set reminder hours:min from current time``\n\n**$addsched <day> <time> <time_zone_offset> <desc>** - ``Add a schedule on a 24-hour format time in a day of a week. Use the same command to edit an already existing schedule at the same time``\n\n**$wiki <topic>** - ``show summary of the topic``\n\n**$ping** - ``show bot's latency``\n\n**$help** - ``show commands``"
       )
 
     # SEARCH WIKI
@@ -158,11 +182,13 @@ class MyClient(discord.Client):
                 f"{author.mention} added a schedule.\n{day} - {time} - {desc}")
           else:
             await channel.send(
-                "Invalid time format. Use ``$addsched <day> <time> <desc>``")
+                "Invalid time format. Use ``$addsched <day> <time> <offset> <desc>``"
+            )
 
         except:
           await channel.send(
-              "Invalid time format. Use ``$addsched <day> <time> <desc>``")
+              "Invalid time format. Use ``$addsched <day> <time> <offset> <desc>``"
+          )
 
       else:
         await channel.send("You need to setup your account first.")

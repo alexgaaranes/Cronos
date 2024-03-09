@@ -27,7 +27,6 @@ def addReminder(content, db, id, channel):
 
   # print(str(remind_hour) + ":" + str(remind_min))
 
-  print(type(channel))
   db["reminders"][str(id)] = {
       "channel": str(channel),
       "hour": remind_hour,
@@ -65,45 +64,50 @@ def checkReminder(db):
 
 # Add schedule
 def addSched(db, user_id, day, time, offset, desc, channel):
-  time = time.split(":")
-  hour = int(time[0])  # For different time zone
-  min = int(time[1])
+  split_time = time.split(":")
+  hour = int(split_time[0])  # For different time zone
+  min = int(split_time[1])
   hour = check.formatHour(hour)
   min = check.formatMin(min)
 
-  if time not in check.checkSched(db["schedule"][user_id]["timeHash"])
-  db["schedule"][day] = {
-      user_id: {
-          "timeHash": {
-              time: {
-                "hour": hour,
-                "min": min
-              }
-          },
-          "desc": desc,
-          "channel": channel,
-          "offset": offset
-      }
-  }
+  offset = int(offset)
+
+  if user_id not in db["schedule"][day]:  # NEW USER
+    db["schedule"][day][user_id] = {
+        time: {
+            "hour": hour,
+            "min": min,
+            "offset": offset,
+            "desc": desc,
+            "channel": str(channel)
+        }
+    }
+  else:
+    db["schedule"][day][user_id][time] = {
+        "hour": hour,
+        "min": min,
+        "offset": offset,
+        "desc": desc,
+        "channel": str(channel)
+    }
 
 
 # Check schedule
-def checkSched(db):
+def checkSched(db, day, reminded):
   now = datetime.datetime.now()
   current_hour = int(now.hour)
   current_minute = int(now.minute)
-  current_day = now.strftime("%a")[0:3]
 
-  for user_id in db["schedule"]:
-    day = db["schedule"][user_id]["day"]
-    time = db["schedule"][user_id]["time"]
-    offset = db["schedule"][user_id]["offset"]
+  for user_id in db["schedule"][day]:
+    if user_id not in reminded:
+      for string_time in db["schedule"][day][user_id]:
+        time = db["schedule"][day][user_id][string_time]
+        offset = time["offset"]
 
-    if day == current_day:
-      if time["hour"] == (current_hour +
-                          offset) and time["min"] == current_minute:
-        desc = db["schedule"][user_id]["desc"]
-        channel = db["schedule"][user_id]["channel"]
-        return (day, time, desc, user_id, channel, True)
+        if time["hour"] == (current_hour +
+                            offset) and time["min"] == current_minute:
+          desc = time["desc"]
+          channel = time["channel"]
+          return (time, desc, user_id, channel, True)
 
   return None, None, None, None, None, False
