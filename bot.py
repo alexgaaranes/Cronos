@@ -1,5 +1,7 @@
+# INVITATION LINK
 # https://discord.com/oauth2/authorize?client_id=1214107803283624006&permissions=133120&scope=bot
-import discord, requests, json, os, datetime, check, commands, asyncio
+import discord, requests, json, os, datetime, check, asyncio
+import commands as cmds
 from discord.channel import _threaded_guild_channel_factory
 from discord import user
 from replit import db
@@ -9,9 +11,10 @@ from replit import db
 # for i in db:
 #   del db[i]
 
-# add user_ids
+# ADD KEYS
 # db["user_ids"] = []
 # db["reminders"] = {}
+# db["user_tz"] = {}
 # db["schedule"] = {
 #     "Mon": {},
 #     "Tue": {},
@@ -28,12 +31,14 @@ reminded = {}
 
 
 class MyClient(discord.Client):
-
   # RUNNING ON_START
   async def on_ready(self):
     print("Logged on as {0}".format(self.user))
     client.loop.create_task(client.check_reminder_time())
     client.loop.create_task(client.check_sched())
+
+  # PROCESS FUNCTIONS
+  # THIS ARE THE FUNCTIONS USED BY THE COMMANDS
 
   # GET CHANNEL ID
   async def get_channel_id(self, guild, channel_name):
@@ -50,7 +55,7 @@ class MyClient(discord.Client):
     while True:
       matched = False
       if db["reminders"] != {}:  # IF NOT EMPTY
-        user_id, channel, hour, minute, matched = commands.checkReminder(db)
+        user_id, channel, hour, minute, matched = cmds.checkReminder(db)
 
       if matched:
         # Get Channel
@@ -61,7 +66,7 @@ class MyClient(discord.Client):
         await channel.send(
             f"<@{int(user_id)}>, {hour} hour/s and {minute} minute/s has passed!"
         )
-        commands.delReminder(db, user_id)
+        cmds.delReminder(db, user_id)
 
       await asyncio.sleep(10)
 
@@ -78,7 +83,7 @@ class MyClient(discord.Client):
       matched = False
 
       if db["schedule"] != {}:  # IF NOT EMPTY
-        tup = commands.checkSched(db, current_day, reminded)
+        tup = cmds.checkSched(db, current_day, reminded)
         time = tup[0]
         desc = tup[1]
         user_id = tup[2]
@@ -105,6 +110,8 @@ class MyClient(discord.Client):
 
       await asyncio.sleep(10)
 
+  # THE COMMANDS IN THIS SECTION TAKES USER INPUT
+  # AND PROCESS IT TO GET THE RESULT
   # DETECT MESSAGES
   async def on_message(self, message):
     global db
@@ -121,18 +128,23 @@ class MyClient(discord.Client):
     # SETUP
     if content.startswith("$setup"):
       if not check.id_exists(id, db):
-        db["user_ids"].append(id)  # add user to db
-        await channel.send(
-            f"{author.mention} registered. Check commands using ``$help``")
+        try:
+          offset = int(content[7:])
+          db["user_ids"].append(id)  # add user to db
+          db["user_tz"][id] = offset
+          await channel.send(
+              f"{author.mention} registered. Check commands using ``$help``")
+        except:
+          await channel.send("Invalid UTC offset. Please try again.")
       else:
-        await channel.send(f"{author.mention} account already exists.")
+        await channel.send(f"{author.mention} already exists.")
 
     # SET REMINDER
     if content.startswith("$remind"):
       if check.id_exists(id, db):  # if the  id exists
         try:
-          db, hour, min = commands.addReminder(content, db, id,
-                                               channel)  # update db
+          db, hour, min = cmds.addReminder(content, db, id,
+                                           channel)  # update db
 
           await channel.send(
               f"Reminder set {hour} hour/s and {min} minute/s from now"
@@ -154,7 +166,7 @@ class MyClient(discord.Client):
         try:
           topic = content[6:]
           await channel.send(f"Searching wiki about {topic}...")
-          result = commands.wiki(topic)
+          result = cmds.wiki(topic)
 
           await channel.send(f"```Topic: {topic} - \n{result}```")
         except:
@@ -177,7 +189,7 @@ class MyClient(discord.Client):
           desc = " ".join(contents[4:])
 
           if check.checkTime(time) and check.checkDay(day):
-            db = commands.addSched(db, id, day, time, offset, desc, channel)
+            db = cmds.addSched(db, id, day, time, offset, desc, channel)
             await channel.send(
                 f"{author.mention} added a schedule.\n{day} - {time} - {desc}")
           else:
@@ -198,7 +210,7 @@ class MyClient(discord.Client):
       if check.id_exists(id, db):
         try:
           await channel.send("Viewing your schedule...")
-          view_str = commands.viewSched(db["schedule"], id)
+          view_str = cmds.viewSched(db["schedule"], id)
 
           await channel.send(f"{author.mention}'s Schedule\n" + "```" +
                              view_str + "```")
@@ -231,7 +243,7 @@ class MyClient(discord.Client):
 
           if str(reaction.emoji) == "✅":
             try:
-              db = commands.delSched(db, id, day, time)
+              db = cmds.delSched(db, id, day, time)
               await channel.send(f"{author.mention} deleted a schedule.")
             except:
               await channel.send(
@@ -269,7 +281,7 @@ class MyClient(discord.Client):
 
           if str(reaction.emoji) == "✅":
             try:
-              db = commands.clearSched(db, id)
+              db = cmds.clearSched(db, id)
               await channel.send(f"{author.mention} cleared their schedule.")
             except:
               await channel.send(
